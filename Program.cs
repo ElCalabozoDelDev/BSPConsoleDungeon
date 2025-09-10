@@ -65,7 +65,7 @@ class Program
     public static void Main(string[] args)
     {
         // Crear el mapa de GoRogue más grande para el estilo Diablo
-        _map = new Map(width: 100, height: 40,
+        _map = new Map(width: 300, height: 120,
                       numberOfEntityLayers: 1, distanceMeasurement: Distance.CHEBYSHEV);
 
         // Generar el mapa estilo Diablo
@@ -108,15 +108,15 @@ class Program
         int maxAttempts = 50;
 
         // Intentar crear 6-8 habitaciones grandes
-        int targetRooms = _rng.Next(6, 9);
+        int targetRooms = _rng.Next(10, 20);
 
         while (_rooms.Count < targetRooms && attempts < maxAttempts)
         {
             attempts++;
 
             // Tamaños de habitación más grandes para estilo Diablo
-            int roomWidth = _rng.Next(12, 20);
-            int roomHeight = _rng.Next(8, 15);
+            int roomWidth = _rng.Next(50, 80);
+            int roomHeight = _rng.Next(30, 60);
 
             // Posición aleatoria con margen
             int roomX = _rng.Next(3, _map.Width - roomWidth - 3);
@@ -241,37 +241,33 @@ class Program
 
     private static void CreateThickCorridor(Coord start, Coord end)
     {
-        // CORREGIDO: Simplificar la lógica de creación de corredores
+        int corridorHalfWidthX = 10; // Ancho horizontal: 9 celdas
+        int corridorHalfWidthY = 8; // Ancho vertical: 5 celdas
+        
         var path = GetCorridorPath(start, end);
 
         foreach (var point in path)
         {
-            // Crear pasillo de 3x3 centrado en cada punto del camino
-            for (int dx = -1; dx <= 1; dx++)
+            for (int dx = -corridorHalfWidthX; dx <= corridorHalfWidthX; dx++)
             {
-                for (int dy = -1; dy <= 1; dy++)
+                for (int dy = -corridorHalfWidthY; dy <= corridorHalfWidthY; dy++)
                 {
                     var pos = new Coord(point.X + dx, point.Y + dy);
                     
-                    // Verificar límites del mapa
                     if (pos.X > 0 && pos.X < _map.Width - 1 && 
                         pos.Y > 0 && pos.Y < _map.Height - 1)
                     {
-                        // CORREGIDO: Solo verificar si NO es un pilar antes de sobrescribir
                         var currentTerrain = _map.Terrain[pos];
-                        
-                        // Si es un pilar (no caminable y no transparente dentro de una habitación), no lo sobrescribir
                         bool isPillar = !currentTerrain.IsWalkable && !currentTerrain.IsTransparent && IsInRoom(pos);
                         
                         if (!isPillar)
                         {
-                            // Crear suelo en el corredor
                             double random = _rng.NextDouble();
                             GameObject terrain;
 
-                            if (random < 0.01) // 1% agua en pasillos
+                            if (random < 0.01)
                                 terrain = TerrainFactory.Water(pos);
-                            else if (random < 0.03) // 2% hierba en pasillos
+                            else if (random < 0.03)
                                 terrain = TerrainFactory.Grass(pos);
                             else
                                 terrain = TerrainFactory.Floor(pos);
