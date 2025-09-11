@@ -33,22 +33,14 @@ static class EntityFactory
         => new GameObject(position, layer: 1, parentObject: null, isStatic: false, isWalkable: false, isTransparent: true);
 }
 
-// Estructura para representar habitaciones estilo Diablo
-public struct DiabloRoom
+public struct Room(Coord topLeft, int width, int height)
 {
-    public Coord TopLeft;
-    public int Width;
-    public int Height;
-    public Coord Center => new Coord(TopLeft.X + Width / 2, TopLeft.Y + Height / 2);
-    
-    public DiabloRoom(Coord topLeft, int width, int height)
-    {
-        TopLeft = topLeft;
-        Width = width;
-        Height = height;
-    }
+    public Coord TopLeft = topLeft;
+    public int Width = width;
+    public int Height = height;
+    public readonly Coord Center => new(TopLeft.X + Width / 2, TopLeft.Y + Height / 2);
 
-    public bool Contains(Coord point)
+    public readonly bool Contains(Coord point)
     {
         return point.X >= TopLeft.X && point.X < TopLeft.X + Width &&
                point.Y >= TopLeft.Y && point.Y < TopLeft.Y + Height;
@@ -60,7 +52,7 @@ class Program
     private static Map _map;
     private static GameObject _player;
     private static readonly Random _rng = new Random();
-    private static List<DiabloRoom> _rooms = new List<DiabloRoom>();
+    private static List<Room> _rooms = new List<Room>();
 
     public static void Main(string[] args)
     {
@@ -69,7 +61,7 @@ class Program
                       numberOfEntityLayers: 1, distanceMeasurement: Distance.CHEBYSHEV);
 
         // Generar el mapa estilo Diablo
-        GenerateDiabloStyleMap();
+        GenerateStyleMap();
 
         // Encontrar una posición válida para el jugador
         var playerPosition = FindValidPlayerPosition();
@@ -80,7 +72,7 @@ class Program
         GameLoop();
     }
 
-    private static void GenerateDiabloStyleMap()
+    private static void GenerateStyleMap()
     {
         // Inicializar todo como muros
         for (int x = 0; x < _map.Width; x++)
@@ -92,20 +84,20 @@ class Program
         }
 
         // Generar habitaciones grandes estilo Diablo
-        GenerateDiabloRooms();
+        GenerateRooms();
 
         // Conectar habitaciones con pasillos gruesos - CORREGIDO
         ConnectRoomsWithThickCorridors();
 
         // Añadir detalles arquitectónicos estilo Diablo
-        AddDiabloArchitecturalDetails();
+        AddArchitecturalDetails();
     }
 
-    private static void GenerateDiabloRooms()
+    private static void GenerateRooms()
     {
         _rooms.Clear();
         int attempts = 0;
-        int maxAttempts = 50;
+        int maxAttempts = 500;
 
         // Intentar crear 6-8 habitaciones grandes
         int targetRooms = _rng.Next(10, 20);
@@ -115,14 +107,14 @@ class Program
             attempts++;
 
             // Tamaños de habitación más grandes para estilo Diablo
-            int roomWidth = _rng.Next(50, 80);
-            int roomHeight = _rng.Next(30, 60);
+            int roomWidth = _rng.Next(12, 14);
+            int roomHeight = _rng.Next(10, 12);
 
             // Posición aleatoria con margen
             int roomX = _rng.Next(3, _map.Width - roomWidth - 3);
             int roomY = _rng.Next(3, _map.Height - roomHeight - 3);
 
-            var newRoom = new DiabloRoom(new Coord(roomX, roomY), roomWidth, roomHeight);
+            var newRoom = new Room(new Coord(roomX, roomY), roomWidth, roomHeight);
 
             // Verificar que no se superponga con habitaciones existentes
             bool overlaps = false;
@@ -138,12 +130,12 @@ class Program
             if (!overlaps)
             {
                 _rooms.Add(newRoom);
-                CreateDiabloRoom(newRoom);
+                CreateRoom(newRoom);
             }
         }
     }
 
-    private static bool RoomsOverlap(DiabloRoom room1, DiabloRoom room2, int buffer)
+    private static bool RoomsOverlap(Room room1, Room room2, int buffer)
     {
         return !(room1.TopLeft.X + room1.Width + buffer <= room2.TopLeft.X ||
                  room2.TopLeft.X + room2.Width + buffer <= room1.TopLeft.X ||
@@ -151,7 +143,7 @@ class Program
                  room2.TopLeft.Y + room2.Height + buffer <= room1.TopLeft.Y);
     }
 
-    private static void CreateDiabloRoom(DiabloRoom room)
+    private static void CreateRoom(Room room)
     {
         // Crear el suelo de la habitación (incluyendo los bordes interiores)
         for (int x = room.TopLeft.X; x < room.TopLeft.X + room.Width; x++)
@@ -162,17 +154,7 @@ class Program
                 if (x > room.TopLeft.X && x < room.TopLeft.X + room.Width - 1 &&
                     y > room.TopLeft.Y && y < room.TopLeft.Y + room.Height - 1)
                 {
-                    double random = _rng.NextDouble();
-                    GameObject terrain;
-
-                    if (random < 0.02) // 2% agua/charcos
-                        terrain = TerrainFactory.Water((x, y));
-                    else if (random < 0.05) // 3% hierba/musgo
-                        terrain = TerrainFactory.Grass((x, y));
-                    else // 95% suelo normal
-                        terrain = TerrainFactory.Floor((x, y));
-
-                    _map.SetTerrain(terrain);
+                    _map.SetTerrain(TerrainFactory.Floor((x, y)));
                 }
             }
         }
@@ -184,7 +166,7 @@ class Program
         }
     }
 
-    private static void AddPillarsToRoom(DiabloRoom room)
+    private static void AddPillarsToRoom(Room room)
     {
         // Añadir pilares en esquinas interiores y centro
         var pillarPositions = new[]
@@ -241,8 +223,8 @@ class Program
 
     private static void CreateThickCorridor(Coord start, Coord end)
     {
-        int corridorHalfWidthX = 10; // Ancho horizontal: 9 celdas
-        int corridorHalfWidthY = 8; // Ancho vertical: 5 celdas
+        int corridorHalfWidthX = 6; // Ancho horizontal: 9 celdas
+        int corridorHalfWidthY = 4; // Ancho vertical: 5 celdas
         
         var path = GetCorridorPath(start, end);
 
@@ -306,7 +288,7 @@ class Program
         return path;
     }
 
-    private static void AddDiabloArchitecturalDetails()
+    private static void AddArchitecturalDetails()
     {
         // Añadir algunos muros decorativos y obstáculos menores
         foreach (var room in _rooms)
@@ -319,7 +301,7 @@ class Program
         }
     }
 
-    private static void AddAlcoveToRoom(DiabloRoom room)
+    private static void AddAlcoveToRoom(Room room)
     {
         // Crear pequeñas alcobas en las paredes de la habitación
         var wallSide = _rng.Next(4); // 0=norte, 1=este, 2=sur, 3=oeste
